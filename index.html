@@ -9,11 +9,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tiny Armies">
 <meta name="format-detection" content="telephone=no">
-<meta name="description" content="A cozy pixel-art adventure for phone or PC: paint tiny armies, mix colours nobody can buy and bring a rainy town's hobby shop back to life.">
+<meta name="description" content="A cozy pixel-art adventure for phone or PC: paint tiny armies, mix unique colours and bring a rainy town's hobby shop back to life.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tom's Tiny Armies">
 <meta property="og:title" content="Tom's Tiny Armies">
-<meta property="og:description" content="A cozy pixel-art adventure for phone or PC: paint tiny armies, mix colours nobody can buy and bring a rainy town's hobby shop back to life.">
+<meta property="og:description" content="A cozy pixel-art adventure for phone or PC: paint tiny armies, mix unique colours and bring a rainy town's hobby shop back to life.">
 <meta property="og:url" content="https://ifr13nd.github.io/toms-tiny-armies/">
 <meta property="og:image" content="https://ifr13nd.github.io/toms-tiny-armies/og.png">
 <meta property="og:image:width" content="1200">
@@ -24,7 +24,7 @@
 <meta property="og:locale:alternate" content="es">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Tom's Tiny Armies">
-<meta name="twitter:description" content="A cozy pixel-art adventure for phone or PC: paint tiny armies, mix colours nobody can buy and bring a rainy town's hobby shop back to life.">
+<meta name="twitter:description" content="A cozy pixel-art adventure for phone or PC: paint tiny armies, mix unique colours and bring a rainy town's hobby shop back to life.">
 <meta name="twitter:image" content="https://ifr13nd.github.io/toms-tiny-armies/og.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -45,7 +45,7 @@ html.px-swipe-scroll{overflow-y:auto!important;touch-action:pan-y!important}html
 <script>
 'use strict';
 /* ======================= GAME_CONF (pixel.config.mjs) ======================= */
-const GAME_CONF = {"id":"toms-tiny-armies","title":"Tom's Tiny Armies","langs":["en","de","es"],"shortTitle":"Tiny Armies","titles":{"de":"Tom's Tiny Armies","es":"Tom's Tiny Armies"},"description":{"en":"A cozy pixel-art adventure for phone or PC: paint tiny armies, mix colours nobody can buy and bring a rainy town's hobby shop back to life.","de":"Ein gemütliches Pixel-Abenteuer für Handy oder PC: Male winzige Armeen, mische Farben, die man nicht kaufen kann, und erwecke einen Hobbyladen zu neuem Leben.","es":"Una aventura pixel art acogedora para móvil o PC: pinta ejércitos diminutos, mezcla colores únicos y devuelve la vida a una tienda de un pueblo lluvioso."},"money":{"en":"¤{n}","de":"{n} ¤","es":"{n} ¤"},"pageBg":"#000000","loading":{"en":"OPENING THE SHOP…","de":"DER LADEN ÖFFNET…","es":"ABRIENDO LA TIENDA…"},"aria":{"en":"Tom's Tiny Armies: a pixel-art game. Arrows or WASD to walk, Enter or E to use, Esc for the menu, M to mute. Touch: tap to walk and use.","de":"Tom's Tiny Armies: ein Pixel-Art-Spiel. Pfeiltasten oder WASD zum Gehen, Enter oder E zum Benutzen, Esc für das Menü, M für Ton aus. Touch: tippen.","es":"Tom's Tiny Armies: un juego de pixel art. Flechas o WASD para andar, Intro o E para usar, Esc para el menú, M para silenciar. Táctil: toca."},"saveVersion":1,"i18n":{"dialogueWidth":268,"dialogueLines":3,"choiceWidth":236,"itemNameWidth":96,"capsStrings":[]},"smoke":{"money":1000}};
+const GAME_CONF = {"id":"toms-tiny-armies","title":"Tom's Tiny Armies","langs":["en","de","es"],"shortTitle":"Tiny Armies","titles":{"de":"Tom's Tiny Armies","es":"Tom's Tiny Armies"},"description":{"en":"A cozy pixel-art adventure for phone or PC: paint tiny armies, mix unique colours and bring a rainy town's hobby shop back to life.","de":"Ein gemütliches Pixel-Abenteuer für Handy oder PC: Male winzige Armeen, mische einzigartige Farben und erwecke einen Hobbyladen zu neuem Leben.","es":"Una aventura pixel art acogedora para móvil o PC: pinta ejércitos diminutos, mezcla colores únicos y devuelve la vida a una tienda de un pueblo lluvioso."},"money":{"en":"¤{n}","de":"{n} ¤","es":"{n} ¤"},"pageBg":"#000000","loading":{"en":"OPENING THE SHOP…","de":"DER LADEN ÖFFNET…","es":"ABRIENDO LA TIENDA…"},"aria":{"en":"Tom's Tiny Armies: a pixel-art game. Arrows or WASD to walk, Enter or E to use, Esc for the menu, M to mute. Touch: tap to walk and use.","de":"Tom's Tiny Armies: ein Pixel-Art-Spiel. Pfeiltasten oder WASD zum Gehen, Enter oder E zum Benutzen, Esc für das Menü, M für Ton aus. Touch: tippen.","es":"Tom's Tiny Armies: un juego de pixel art. Flechas o WASD para andar, Intro o E para usar, Esc para el menú, M para silenciar. Táctil: toca."},"saveVersion":1,"i18n":{"dialogueWidth":268,"dialogueLines":3,"choiceWidth":236,"itemNameWidth":96,"capsStrings":[]},"smoke":{"money":1000}};
 
 /* ======================= src/01_style.js (src) ======================= */
 'use strict';
@@ -6083,7 +6083,7 @@ const LAYOUT = {
   "My fan is not for sale.": "Mein Fächer ist unverkäuflich.",
   "I only bid on what I love, dear.": "Ich biete nur auf, was ich liebe, Schätzchen.",
   "Biscuit": "Keks",
-  "Paint tiny armies. Mix colours nobody can buy.": "Male winzige Armeen. Mische Farben, die keiner verkauft.",
+  "Mix unique colours. Embark on your journey.": "Mische einzigartige Farben. Begib dich auf deine Reise.",
   "{y}WALK{/} with the arrow keys, or click where you want to go. {y}E{/} or {y}ENTER{/} talks, looks and uses things. {y}ESC{/} opens the pause menu.": "{y}LAUF{/} mit den Pfeiltasten oder klick dorthin, wo du hinwillst. {y}E{/} oder {y}ENTER{/}: reden, ansehen, benutzen. {y}ESC{/} öffnet das Pausenmenü.",
   "{y}A DAY{/}: read the morning card, then paint, mix and visit the town in any order. Flip the sign once a day to {y}OPEN THE SHOP{/}. When the lamps come on, the stairs lead up to bed.": "{y}EIN TAG{/}: Erst die Morgenkarte, dann malen, mischen und durch die Stadt bummeln, wie du magst. Einmal am Tag drehst du das Schild um: {y}LADEN ÖFFNEN{/}. Gehen die Lampen an, führt die Treppe hinauf ins Bett.",
   "{y}THE GOAL{/}: the flag in the top bar shows the next renovation and its price. When it says {y}READY{/}, Henny knocks in the evening. Pay her, sleep, and wake up to a new shop.": "{y}DAS ZIEL{/}: Das Fähnchen oben in der Leiste zeigt den nächsten Umbau und seinen Preis. Steht dort {y}BEREIT{/}, klopft Henny am Abend. Bezahl sie, schlaf und wach in einem neuen Laden auf.",
@@ -7762,7 +7762,7 @@ const LAYOUT = {
   "My fan is not for sale.": "Mi abanico no está en venta.",
   "I only bid on what I love, dear.": "Solo pujo por lo que amo, querido.",
   "Biscuit": "Galleta",
-  "Paint tiny armies. Mix colours nobody can buy.": "Pinta ejércitos diminutos. Mezcla colores únicos.",
+  "Mix unique colours. Embark on your journey.": "Mezcla colores únicos. Emprende tu viaje.",
   "{y}WALK{/} with the arrow keys, or click where you want to go. {y}E{/} or {y}ENTER{/} talks, looks and uses things. {y}ESC{/} opens the pause menu.": "{y}CAMINA{/} con las flechas o haz clic donde quieras ir. {y}E{/} o {y}ENTER{/}: hablar, mirar y usar cosas. {y}ESC{/} abre el menú de pausa.",
   "{y}A DAY{/}: read the morning card, then paint, mix and visit the town in any order. Flip the sign once a day to {y}OPEN THE SHOP{/}. When the lamps come on, the stairs lead up to bed.": "{y}UN DÍA{/}: lee la tarjeta de la mañana y luego pinta, mezcla y visita el pueblo en el orden que quieras. Gira el letrero una vez al día para {y}ABRIR LA TIENDA{/}. Cuando se encienden las luces, sube a dormir.",
   "{y}THE GOAL{/}: the flag in the top bar shows the next renovation and its price. When it says {y}READY{/}, Henny knocks in the evening. Pay her, sleep, and wake up to a new shop.": "{y}LA META{/}: el banderín de la barra superior muestra la próxima reforma y su precio. Cuando diga {y}¡LISTO!{/}, Henny llamará por la noche. Págale, duerme y despierta en una tienda nueva.",
@@ -23190,7 +23190,7 @@ hdzkSSbcc.
 
   // ================================================================ TEXT (presentation)
   const TEXT = {
-    tagline: 'Paint tiny armies. Mix colours nobody can buy.',
+    tagline: 'Mix unique colours. Embark on your journey.',
     /** HOW TO PLAY (pause menu + title): paragraphs wrapped at 268 px, a page every 9 lines (blank separators included) */
     help: [
       '{y}WALK{/} with the arrow keys, or click where you want to go. {y}E{/} or {y}ENTER{/} talks, looks and uses things. {y}ESC{/} opens the pause menu.',
@@ -38093,13 +38093,17 @@ kkkkkkkkkkkk`, { p: 'PARCH', d: 'PRIMER1', r: 'RUST', k: 'KRAFT' });
     return y + LOGO.h;
   }
 
-  /** the tagline's lines (≤ 2: the board's width, else a wider wrap), widths and final outlined canvases — per language */
+  /** the tagline's lines (≤ 2: the board's width, else a wider wrap; never 3 — a 5-row touch menu would cover it), widths and outlined canvases */
   const TAGC = { lang: '', src: '', n: 0, L: [], w: [], cv: [] };
   function tagLines() {
     const tag = TXT().tagline; if (!tag) return null;
     if (TAGC.lang === I18N.lang && TAGC.src === tag) return TAGC;
     buildLogo(); TAGC.lang = I18N.lang; TAGC.src = tag;
-    let L = wrapText(T(tag), LOGO.w + 8, FONT_M); if (L.length > 2) L = wrapText(T(tag), 236, FONT_M);
+    // one sentence per line when each fits under the board ("Mix unique colours. / Embark on your journey."),
+    // else the board's wrap, else a wider one
+    const s = T(tag), sen = s.split(/(?<=[.!?…])\s+/);
+    let L = sen.length === 2 && sen.every(x => textW(x) <= LOGO.w + 8) ? sen : wrapText(s, LOGO.w + 8, FONT_M);
+    if (L.length > 2) L = wrapText(s, 236, FONT_M);
     TAGC.n = Math.min(2, L.length); TAGC.L = L; TAGC.w.length = 0; TAGC.cv.length = 0;
     for (let i = 0; i < TAGC.n; i++) { const w = textW(L[i]), cv = canvas8(w + 2, 12); pushTarget(); target(cv); textO(L[i], 1, 1, K.PARCH, ROLE.ink, FONT_M); popTarget(); TAGC.w.push(w); TAGC.cv.push(cv); }
     return TAGC;
@@ -39938,7 +39942,7 @@ ooooo`, { o: 'BRONZE', H: 'HONEY', y: 'FLAME' });
     },
   };
 
-  Object.assign(CINE, { loop: LOOP, _ti: () => TI, _it: () => IT, _st: () => ST, _lt: () => LT, _ln: () => LN, _en: () => ED, _cr: () => CR, _tagLeft: tagLeft,
+  Object.assign(CINE, { loop: LOOP, _ti: () => TI, _it: () => IT, _st: () => ST, _lt: () => LT, _ln: () => LN, _en: () => ED, _cr: () => CR, _tagLeft: tagLeft, _tag: () => { const tg = tagLines(); return tg ? { n: tg.n, all: tg.L.length, w: tg.w.slice() } : null; },
     _art: reset => { if (reset) ARTHK = null; return artHooks(); } });   // (tests) the art hooks, re-detected on reset
 })();
 
