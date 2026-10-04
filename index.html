@@ -3896,6 +3896,9 @@ const LAYOUT = {
     flood: 0.35, floodLamp: 0.45, dabPenalty: 0.05, creepPenalty: 0.08, creepMs: 60, creepBrushes: 0.7, zoneFloor: 0.4,
     bpm: 90, glints: 5, perfectMs: 70, perfectMsLamp: 100, goodMs: 150, glintScores: [1.0, 0.6, 0.2],
     basecoatWeight: 0.6, highlightWeight: 0.4, washAutoSecs: 2, wetpalSecs: 8,
+    // the figure's pixel detail on the Paint Desk (2026-10-04, owner): 2 = finer (Scale2x / Scale3x models, same on-screen size);
+    // 1 = the original 4x / 3x blocks (ROLL BACK: set 1; git tag figures-4x-blocks; preview the old look live with ?detail=1)
+    detail: 2,
     scale: { trooper: 4, hero: 4, monster: 4, legend: 3, knight: 3 }, knightWindows: 2,
     // wave-3 calibration (paint): CRISP only within ±crispFrac of the release window around the chime; the score falls to edgeScore at
     // the window's edge (curve edgeCurve); the auto-players' timing per profile (release σ s, glint σ ms, focus = share of anticipated chimes)
@@ -14324,15 +14327,16 @@ TS.PPhPP.....
        base    0..3  cobbles / moss / leaves / snow (else job.base, else a finished piece gets its faction's default;
                an in-progress draw — zones/mask/wash/hi given — keeps a primer base until a base is passed)
        lantern 0..1  the lantern glass lit + its warm glow (default: ART.fx.knightLit for the Lantern Knight)
+       detail  2 | 3  the Paint Desk's finer model: the same art Scale2x / Scale3x'd BEFORE the light model (draw at scale / detail)
    FIG.mini(job, cx, by, t)             ~half size (Trooper 9x13 incl. outline), Starlight/Legendary halos included
    FIG.thumb(job, cx, by, t)            6x9 (Monster 8x8, Legend 7x9), no outline (its shadow-side edge darkens instead);
                                         a Starlight / Legendary piece twinkles now and then (+ a small halo for a Legendary)
    FIG.size(t, v) → {w, h}              native 1x size (the same object every call)
-   FIG.zoneMap(t, fac, v, vin?)         canvas8 1x zone ids: 0 none · 1 cloak · 2 trim · 3 base · 4 skin · 5 metal · 6 eyes ·
+   FIG.zoneMap(t, fac, v, vin?, detail?)         canvas8 1x zone ids: 0 none · 1 cloak · 2 trim · 3 base · 4 skin · 5 metal · 6 eyes ·
                                         7 outline · 8 crack (only when vin, or always for Sir Puddle) · 9 the Lantern Knight's
                                         lantern (glass + frame: painted last, lights up). Cached: do not modify
-   FIG.glints(t, fac, v) → [[x,y]×5]    the five highlight points at 1x, top to bottom (cached array)
-   FIG.rings(t, fac, v, zone)           {ring: Uint8Array (BFS ring per pixel, 255 = not in the zone), max} for zone 1/2/8
+   FIG.glints(t, fac, v, detail?) → [[x,y]×5]    the five highlight points at 1x, top to bottom (cached array)
+   FIG.rings(t, fac, v, zone, detail?)           {ring: Uint8Array (BFS ring per pixel, 255 = not in the zone), max} for zone 1/2/8
    FIG.paint(h, f, step, x, y, t)       palette idx of hue h at finish f (1..5; 6 → FIG.legend(h …)) for tone step 0..4 at
                                         figure pixel (x, y), time t (seconds)
    FIG.legend(leg, step, x, y, t, edge?) the same for a Legendary; edge = the pixel's distance to the cloak's edge (First Frost)
@@ -14977,6 +14981,33 @@ TS.PPhPP.....
       if (p.tone && p.tone[j] && p.tone[j][i] >= '0' && p.tone[j][i] <= '4') m.force[k] = p.tone[j].charCodeAt(i) - 48;
     }
   }
+  /** the Paint Desk's finer figure (LAYOUT.paint.detail): Scale2x / Scale3x on the MATERIAL map before the light model shades
+   *  it — the same art with rounder edges and finer shading. Each sub-pixel copies its source pixel's tone override, crack + own. */
+  function upscale(m, f) {
+    const w = m.w, h = m.h, W2 = w * f, N = W2 * h * f, a = m.mat, S = new Int32Array(9);
+    const mat = new Uint8Array(N), force = new Uint8Array(N).fill(255), crack = new Uint8Array(N), own = new Uint8Array(N);
+    const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? -1 : y * w + x), mm = i => (i < 0 ? M_NONE : a[i]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const e = y * w + x, E = a[e];
+      const iB = at(x, y - 1), iD = at(x - 1, y), iF = at(x + 1, y), iH = at(x, y + 1), B = mm(iB), D = mm(iD), F = mm(iF), H = mm(iH);
+      if (f === 2) {                                                 // Scale2x (EPX)
+        S[0] = D === B && D !== H && B !== F ? iB : e; S[1] = B === F && B !== D && F !== H ? iF : e;
+        S[2] = D === H && D !== F && H !== B ? iD : e; S[3] = H === F && H !== D && F !== B ? iH : e;
+      } else {                                                       // Scale3x (AdvMAME3x)
+        const A = mm(at(x - 1, y - 1)), C_ = mm(at(x + 1, y - 1)), G = mm(at(x - 1, y + 1)), I = mm(at(x + 1, y + 1));
+        const db = D === B && D !== H && B !== F, bf = B === F && B !== D && F !== H, dh = D === H && D !== F && H !== B, hf = H === F && H !== D && F !== B;
+        S[0] = db ? iD : e; S[1] = (db && E !== C_) || (bf && E !== A) ? iB : e; S[2] = bf ? iF : e;
+        S[3] = (db && E !== G) || (dh && E !== A) ? iD : e; S[4] = e; S[5] = (bf && E !== I) || (hf && E !== C_) ? iF : e;
+        S[6] = dh ? iD : e; S[7] = (dh && E !== I) || (hf && E !== G) ? iH : e; S[8] = hf ? iF : e;
+      }
+      for (let k = 0; k < f * f; k++) {
+        const s = S[k], o = (y * f + ((k / f) | 0)) * W2 + x * f + (k % f);
+        if (s < 0) { mat[o] = M_NONE; continue; }
+        mat[o] = a[s]; force[o] = m.force[s]; crack[o] = m.crack[s]; own[o] = m.own[s];
+      }
+    }
+    return Object.assign({}, m, { w: W2, h: h * f, mat, force, crack, own });
+  }
   const SOLID = m => m !== M_NONE && m !== M_OUT;
   /** the light model: per-part domes + a global body dome → Lambert from the top-left → tones 0..4 */
   const LX = -0.55, LY = -0.72, LZ = 0.95, LN = Math.sqrt(LX * LX + LY * LY + LZ * LZ);
@@ -15198,7 +15229,7 @@ TS.PPhPP.....
     m.size = { w, h };
     return m;
   }
-  const MODELS = new Array(64).fill(null);                        // [type*4+fac] (0..15) · 16 + variant index (17..24) · +32 mini · thumbs separate
+  const MODELS = new Array(192).fill(null);                       // + 64: the 2x detail model, + 128: the 3x (Paint Desk)                        // [type*4+fac] (0..15) · 16 + variant index (17..24) · +32 mini · thumbs separate
   const MINIS = new Array(64).fill(null), THUMBS = new Array(64).fill(null);
   // ---- VARIANTS: patches over a base silhouette ('.' keep, '-' erase, 'k' a crack over the material) or their own art
   const VARIANT_PATCH = {
@@ -15234,26 +15265,29 @@ TS.PPhPP.....
     const ti = TIDX[t], fi = FIDX[fac];
     return (ti === undefined ? 0 : ti) * 4 + (fi === undefined ? 0 : fi);
   }
-  function buildModel(mi) {
+  function buildModel(idx) {
+    const det = 1 + (idx >> 6), mi = idx & 63, up = m => (det > 1 ? upscale(m, det) : m);   // idx = mi + 64 * (detail - 1)
     let def, m;
     if (mi >= 32) {                                                // pots (32 + f) and tray drops (40 + f)
       def = mi >= 40 ? SIL['drop_' + (mi - 40 === 1 ? 1 : 2)] : SIL['pot_' + (mi - 32)] || SIL.pot_2;
-      m = parseArt(def); shadeModel(m); finishModel(m, def); m.ti = 0; m.fi = 0; m.idx = mi; return m;
+      m = up(parseArt(def)); shadeModel(m); finishModel(m, def); m.ti = 0; m.fi = 0; m.idx = idx; m.det = det; return m;
     }
     if (mi >= 16) {
       const vname = VNAMES[mi - 16], vv = VARS[vname], vp = VARIANT_PATCH[vname];
       if (vp && (vname === 'queen' || vname === 'knight')) m = parseArt(SIL[vname]);
       else { m = parseArt(silDef(vv[1], vv[2])); if (vp) for (const p of vp.patches) applyPatch(m, p); if (vp && vp.pal) m.pal = Object.assign({}, m.pal, vp.pal); }
-      shadeModel(m); finishModel(m, vp); m.vname = vname; m.ti = vv[1]; m.fi = vv[2];
+      m = up(m); shadeModel(m); finishModel(m, vp); m.vname = vname; m.ti = vv[1]; m.fi = vv[2];
     } else {
-      def = silDef(mi >> 2, mi & 3); m = parseArt(def); shadeModel(m); finishModel(m, def); m.ti = mi >> 2; m.fi = mi & 3;
+      def = silDef(mi >> 2, mi & 3); m = up(parseArt(def)); shadeModel(m); finishModel(m, def); m.ti = mi >> 2; m.fi = mi & 3;
     }
-    m.idx = mi; return m;
+    m.idx = idx; m.det = det; return m;
   }
   function silDef(ti, fi) {
     const key = TYPES[ti] + '_' + FACS[fi];
     return SIL[key] || SIL[TYPES[ti] + '_lantern'] || SIL.trooper_lantern;
   }
+  /** a detail model's index (detail 2 / 3: the Paint Desk's finer figure; anything else = the 1x model) */
+  const detIdx = (mi, det) => mi + 64 * ((det === 2 || det === 3 ? det : 1) - 1);
   function model(mi) { warmStep(); return MODELS[mi] || (MODELS[mi] = buildModel(mi)); }
   // progressive warm-up: after the first FIG call, build ONE pending model (+ its mini + thumb) per frame, so a silhouette
   // seen for the first time later costs a lookup instead of a ~2-4 ms build in the frame it appears
@@ -15472,9 +15506,10 @@ TS.PPhPP.....
       out[i] = c;
     }
     // highlights: 1-px points (the Paint Desk's five glints)
-    for (let k = 0; k < ST.hiN && k < 5 && m.glints; k++) {
-      const g = m.glints[k], i = g[1] * w + g[0], mt = mat[i];
-      out[i] = mt === M_CLOAK && ST.hi >= 0 ? (ST.f >= 6 ? K.BRIGHT : PR[ST.hi * 5 + 4]) : K.BRIGHT;
+    for (let k = 0, dt = m.det || 1; k < ST.hiN && k < 5 && m.glints; k++) {
+      const g = m.glints[k], i = g[1] * w + g[0], mt = mat[i], c = mt === M_CLOAK && ST.hi >= 0 ? (ST.f >= 6 ? K.BRIGHT : PR[ST.hi * 5 + 4]) : K.BRIGHT;
+      if (dt === 1) out[i] = c;                                      // a detail model: a dt x dt point (the same size on screen)
+      else for (let yy = g[1]; yy < g[1] + dt && yy < m.h; yy++) for (let xx = g[0]; xx < g[0] + dt && xx < w; xx++) if (SOLID(mat[yy * w + xx])) out[yy * w + xx] = c;
     }
   }
   /** fill ST from a job + opts (no allocation) */
@@ -15500,7 +15535,7 @@ TS.PPhPP.....
     ST.lit = m.glassN && (o && o.lantern !== undefined ? o.lantern : (m.vname === 'knight' && ART.fx && ART.fx.knightLit) ? 1 : 0) || 0;
     prepLUT(m, painted);
   }
-  const SCR = new Uint8Array(40 * 40);                              // per-frame scratch (largest model 24x32)
+  let SCR = new Uint8Array(40 * 40);                                // per-frame scratch (largest 1x model 24x32; grows once for a detail model)
   const CACHE = new Map();
   function jobKey(mi, job) {                                        // a number per static paint job (no strings)
     let k = mi;
@@ -15533,6 +15568,7 @@ TS.PPhPP.....
       if (!px) { if (CACHE.size > 600) CACHE.clear(); px = new Uint8Array(m.w * m.h); renderInto(m, job, px, -1); CACHE.set(key, px); }
       return px;
     }
+    if (SCR.length < m.w * m.h) SCR = new Uint8Array(m.w * m.h);
     renderInto(m, job, SCR, anim ? t : -1); return SCR;
   }
   const needsAnim = () => ST.f >= 3 || ST.lit > 0;
@@ -15622,15 +15658,15 @@ TS.PPhPP.....
   function lanternFX(m, cx, by, k, flip, lit, t) {
     const lx = Math.round(cx) - ((m.w * k) >> 1) + Math.round((flip ? m.w - 1 - m.glassX : m.glassX) * k + k / 2), ly = Math.round(by) - m.h * k + Math.round(m.glassY * k + k / 2);
     const fl = RM ? 0 : sinT(t * 300) * 0.06 + sinT(t * 731) * 0.04;
-    glow(lx, ly, Math.round(5 * k + 4), TINT.lantern, (0.7 + fl) * lit, RM ? 0 : (FRAME >> 2) & 7, 0, 1.3);
+    glow(lx, ly, Math.round(5 * k * (m.det || 1) + 4), TINT.lantern, (0.7 + fl) * lit, RM ? 0 : (FRAME >> 2) & 7, 0, 1.3);
   }
 
   // ================================================================== PUBLIC API
   function size(t, v) { return model(modelIndex(t, null, v)).size; }
   function size2(t, fac, v) { return model(modelIndex(t, fac, v)).size; }
   const ZMAPS = new Map();
-  function zoneMap(t, fac, v, vin) {
-    const mi = modelIndex(t, fac, v), key = mi * 2 + (vin ? 1 : 0); let cv = ZMAPS.get(key); if (cv) return cv;
+  function zoneMap(t, fac, v, vin, det) {
+    const mi = detIdx(modelIndex(t, fac, v), det), key = mi * 2 + (vin ? 1 : 0); let cv = ZMAPS.get(key); if (cv) return cv;
     const m = model(mi); cv = canvas8(m.w, m.h); cv.d.set(m.zone);
     if (vin || m.vname === 'puddle') for (let i = 0; i < m.w * m.h; i++) if (m.crack[i]) cv.d[i] = 8;
     if (m.lampZone) for (let i = 0; i < m.w * m.h; i++) if (m.lampZone[i]) cv.d[i] = 9;
@@ -15639,20 +15675,20 @@ TS.PPhPP.....
   function draw(job, cx, by, k, o) {
     if (!job) return;
     k = Math.max(1, k | 0);
-    const mi = modelIndex(job.t, job.fac, job.v), m = model(mi);
+    const mi = detIdx(modelIndex(job.t, job.fac, job.v), o && o.detail), m = model(mi), kv = k * m.det;   // kv: the on-screen pixel
     setJob(job, o, m);
     const noAnim = !!(o && o.noAnim), hasT = !!(o && o.t !== undefined), t = hasT ? o.t : TIME, anim = !noAnim && needsAnim();
     const flip = !!(o && o.flip), fx = hasT && !noAnim && !(o && o.fx === false) && ST.hi >= 0 && (o.zones === undefined && !o.mask);
     const px = pixelsFor(m, mi, job, o, t, anim);
-    if (o && o.shadow) shadowEll(cx, by - k, Math.round(m.w * k * 0.42), Math.max(2, k * 2), 1.2);
+    if (o && o.shadow) shadowEll(cx, by - kv, Math.round(m.w * k * 0.42), Math.max(2, kv * 2), 1.2);
     const fcx = cx + Math.round(m.cxOff * k * (flip ? -1 : 1));
     if (fx && ST.f === 5) haloFX(tintOf(HKEY[ST.hi]), 0.62 + (RM ? 0 : 0.08 * sinT(t * 90)), fcx, by, m.w * k, m.h * k, false);
-    if (fx && ST.f >= 6) legendFX(LEGS[ST.li], fcx, by, m.w * k, m.h * k, t, k, 0);
+    if (fx && ST.f >= 6) legendFX(LEGS[ST.li], fcx, by, m.w * k, m.h * k, t, kv, 0);
     const outC = o && o.outline !== undefined && o.outline !== null ? (o.outline === false ? -1 : o.outline) : K.INK;
     const rimC = o && o.rim !== undefined && o.rim !== null && o.rim >= 0 ? o.rim : -1;
     blitK(px, m.w, m.h, cx, by, k, flip, o && o.tbl, outC, rimC, m.rim);
     if (ST.lit > 0) lanternFX(m, cx, by, k, flip, ST.lit, t);
-    if (fx && ST.f >= 6) legendFX(LEGS[ST.li], fcx, by, m.w * k, m.h * k, t, k, 1);
+    if (fx && ST.f >= 6) legendFX(LEGS[ST.li], fcx, by, m.w * k, m.h * k, t, kv, 1);
   }
   function mini(job, cx, by, t) {
     if (!job) return;
@@ -15690,8 +15726,8 @@ TS.PPhPP.....
   function legend(leg, step, x, y, t, e) {
     const li = LIDX[leg]; return legendI(li === undefined ? 0 : li, step < 0 ? 0 : step > 4 ? 4 : step | 0, x | 0, y | 0, t === undefined ? TIME : t, e === undefined ? 3 : e);
   }
-  function glints(t, fac, v) { return model(modelIndex(t, fac, v)).glints; }
-  function rings(t, fac, v, zone) { const m = model(modelIndex(t, fac, v)); return zone === 2 ? m.ringT : zone === 8 ? m.ringK : m.ringC; }
+  function glints(t, fac, v, det) { return model(detIdx(modelIndex(t, fac, v), det)).glints; }
+  function rings(t, fac, v, zone, det) { const m = model(detIdx(modelIndex(t, fac, v), det)); return zone === 2 ? m.ringT : zone === 8 ? m.ringK : m.ringC; }
 
   // ================================================================== POTS, DROPS, JARS, SWATCHES
   const PJOB = { t: 'trooper', fac: 'lantern', v: null, vin: 0, h: null, f: 2, leg: null, trim: null };
@@ -15789,7 +15825,7 @@ TS.PPhPP.....
   }
 
   Object.assign(FIG, { draw, mini, thumb, size, zoneMap, paint, legend, legendFX, glints, rings, pot, drop, jar, swatch });
-  FIG._model = (t, fac, v) => model(modelIndex(t, fac, v));       // dev / tools only (tone + zone maps)
+  FIG._model = (t, fac, v, det) => model(detIdx(modelIndex(t, fac, v), det));       // dev / tools only (tone + zone maps)
 
   // ================================================================== DEV SCENES (English only, never player-visible)
   // figures_sheet (&page=1..4, &bare=1) · figures_finishes (&page=1|2) · figures_legend (&page=1..3) · figures_pots ·
@@ -30247,6 +30283,11 @@ hdzkSSbcc.
 (() => {
   'use strict';
   const L = LAYOUT, P = L.paint, V = L.value;
+  // the figure's pixel detail on the desk (LAYOUT.paint.detail; ?detail=1|2 overrides for a side-by-side look): 2 = the same art as a
+  // Scale2x model drawn at half the scale (4 → 2); a 3x figure (Legends, the Lantern Knight) gets a Scale3x model at 1x. 1 = the
+  // original 4x / 3x blocks, exactly. Every ring / pixel-sized number below is scaled by st.det so the painting plays the same.
+  const DETAIL = (() => { const q = +param('detail', '0'); return q === 1 || q === 2 ? q : P.detail === 2 ? 2 : 1; })();
+  const detOf = sc => (DETAIL < 2 ? 1 : sc % 2 === 0 ? 2 : sc);
   const BEAT = 60 / P.bpm;                  // one beat (90 BPM: 0.667 s)
   const RING_BEATS = 2;                     // a highlight ring closes over 2 beats
   const GAP_DENSITY = 8, GAP_MAX = 6;       // an early release leaves ceil(unpainted share x 8) gaps (1..6)
@@ -30490,7 +30531,7 @@ hdzkSSbcc.
     fig: null, fromStock: false, pot: null, potRef: null, trim: 'yellow', base: 0, lastBase: 0, card: null,
     job: { t: 'trooper', fac: 'lantern', v: null, vin: 0, c: null, h: null, f: 1, leg: null, trim: null, base: undefined, q: 0 },
     bare: { t: 'trooper', fac: 'lantern', v: null, vin: 0, c: null },
-    k: 4, fw: 16, fh: 24, zm: null, figKey: '', plan: [], step: 0, isTwin: false, twinGlints: null,
+    k: 4, det: 1, fw: 16, fh: 24, zm: null, figKey: '', plan: [], step: 0, isTwin: false, twinGlints: null,
     zones: new Float32Array(4), nz: 0, glintS: new Float32Array(5), ng: 0, glueBonus: 0, win: null, steady: false,
     // the current zone (basecoat / glue / lantern)
     zid: '', zd: null, zs: 0, holdT: 0, ringDt: 0.09, tFull: 1, fullAt: -1, rel: 0, R: -1, lateT: 0, score: 1,
@@ -30587,7 +30628,7 @@ hdzkSSbcc.
     }
     // creep rings: up to 3 px into the neighbouring (non-empty) zones
     const creep = new Int8Array(N); let cq = []; for (let i = 0; i < N; i++) if (sel[i]) cq.push(i);
-    for (let r = 1; r <= 3; r++) {
+    for (let r = 1; r <= 3 * st.det; r++) {                                     // (× the detail: the same reach on screen)
       const nx = [];
       for (const j of cq) {
         const x = j % w, y = (j / w) | 0;
@@ -30814,24 +30855,26 @@ hdzkSSbcc.
   let CV_A = null, CV_B = null;
   const CVK = { a: -1, b: -1 };                                        // which zone the cached flood renders belong to
   function cvFor(k, w, h) {
-    const cw = (w + 4) * k, ch = (h + 4) * k;
+    const cw = (w + 4 * st.det) * k, ch = (h + 4 * st.det) * k;
     if (!CV_A || CV_A.w !== cw || CV_A.h !== ch) { CV_A = canvas8(cw, ch); CV_B = canvas8(cw, ch); CVK.a = CVK.b = -1; }
   }
   function figInto(cv, job, k, w, h) {
-    pushTarget(); target(cv); clear8(cv); FIG.draw(job, (cv.w >> 1), cv.h - 2 * k, k, FO); popTarget();
+    pushTarget(); target(cv); clear8(cv); FIG.draw(job, (cv.w >> 1), cv.h - 2 * k * st.det, k, FO); popTarget();
   }
-  function setFO(t, rim, cloak, trim) { FO.t = t; FO.rim = rim; FO.zones = ZN; ZN.cloak = cloak; ZN.trim = trim; FO.crack = 0; FO.wash = 0; FO.hi = 0; FO.base = undefined; FO.shadow = false; FO.tbl = null; FO.lantern = undefined; FO.fx = true; }
+  function setFO(t, rim, cloak, trim) { FO.t = t; FO.rim = rim; FO.zones = ZN; ZN.cloak = cloak; ZN.trim = trim; FO.crack = 0; FO.wash = 0; FO.hi = 0; FO.base = undefined; FO.shadow = false; FO.tbl = null; FO.lantern = undefined; FO.fx = true; FO.detail = st.det; }
+  /** a finer figure keeps the old gloss density: one glossy pixel per small block (vs three per 4x4 / 3x3 block) */
+  function glossMul(k) { const ko = k * st.det, go = ko >= 3 ? 3 : 1, gk = k >= 3 ? 3 : 1; return (go / (ko * ko)) / (gk / (k * k)); }
   /** copy one k x k block from a canvas to the target, with an optional wet gloss (0..1) */
   function copyBlock(cv, sx, sy, dx, dy, k, wet, front) {
-    const sd = cv.d, sw = cv.w, gl = wet > 0 && hh(sx * 3 + 1, sy) < 0.1 + wet * 0.22;
+    const sd = cv.d, sw = cv.w, gl = wet > 0 && hh(sx * 3 + 1, sy) < (0.1 + wet * 0.22) * (st.det > 1 ? glossMul(k) : 1);
     for (let j = 0; j < k; j++) {
       const yy = dy + j; if (yy < CY0 || yy >= CY1) continue;
       const srow = (sy + j) * sw + sx, drow = yy * TW;
       for (let i = 0; i < k; i++) {
         const xx = dx + i; if (xx < CX0 || xx >= CX1) continue;
         let c = sd[srow + i]; if (c === TRANSPARENT) continue;
-        if (front) { if (((xx + yy) & 1) && j < (k >> 1)) c = RAMP_UP[c]; }
-        else if (gl && ((j === 0 && i < 2) || (i === 0 && j === 1))) c = RAMP_UP[c];
+        if (front) { if (((xx + yy) & 1) && j < Math.max(1, k >> 1)) c = RAMP_UP[c]; }
+        else if (gl && (k < 3 ? i === 0 && j === 0 : (j === 0 && i < 2) || (i === 0 && j === 1))) c = RAMP_UP[c];
         TB[drow + xx] = c;
       }
     }
@@ -30846,7 +30889,7 @@ hdzkSSbcc.
   function figPos(cx, by) { st._x0 = cx - ((st.fw * st.k) >> 1); st._y0 = by - st.fh * st.k; }
   /** the figure while a zone floods: the "before" render, then the painted blocks of the "after" render, glossy while wet */
   function drawFloodFigure(cx, by, rim) {
-    const k = st.k, w = st.fw, h = st.fh, M = 2 * k, zd = st.zd, zid = st.zid, t = st.t;
+    const k = st.k, w = st.fw, h = st.fh, M = 2 * k * st.det, zd = st.zd, zid = st.zid, t = st.t;
     cvFor(k, w, h); figPos(cx, by);
     const x0 = st._x0, y0 = st._y0;
     // the "before" state of this zone: glue → bare; cloak → bare; trim → cloak painted (the lantern uses drawFigure's finished path)
@@ -30884,19 +30927,19 @@ hdzkSSbcc.
     for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) {
       const xx = x + i, yy = y + j; if (xx < CX0 || xx >= CX1 || yy < CY0 || yy >= CY1) continue;
       const idx = yy * TW + xx, c = TB[idx];
-      TB[idx] = (i === 1 && j === 1 && wet > 0.3) ? C.BRIGHT : (i + j) & 1 ? LIGHT[wet > 0.5 ? 2 : 1][c] : c;
+      TB[idx] = (st.det === 1 && i === 1 && j === 1 && wet > 0.3) ? C.BRIGHT : (i + j) & 1 ? LIGHT[wet > 0.5 ? 2 : 1][c] : c;
     }
   }
   function drawLanternBlock(px, py, x, y, k, wet) {
     const lit = st.lanternLit, step = lit ? (((px + py + ((st.t * 6) | 0)) % 5) > 1 ? 3 : 4) : (py & 1) ? 1 : 2;
     rect(x, y, k, k, zoneCol('lantern', px, py, step));
-    if (wet > 0) pset(x, y, C.BRIGHT);
+    if (wet > 0 && (st.det === 1 || (px + py * 3) % (st.det * st.det) === 0)) pset(x, y, C.BRIGHT);
   }
   function drawCreep(x0, y0, k, w, zid) {
     const cr = st.zd.creep, rate = st.win.creep, late = st.lateT * rate;
     for (let i = 0; i < cr.length; i++) {
       const r = cr[i]; if (!r) continue;
-      const x = i % w, y = (i / w) | 0, at = (r - 1) * 0.16 + hh(x, y) * 0.22;
+      const x = i % w, y = (i / w) | 0, at = (r - 1) * 0.16 / st.det + hh(x, y) * 0.22;
       if (late < at) continue;
       const c = zoneCol(zid === 'glue' || zid === 'lantern' ? 'cloak' : zid, x, y, 1), bx = x0 + x * k, by = y0 + y * k;
       for (let j = 0; j < k; j++) for (let ii = 0; ii < k; ii++) if (((ii + j + x + y) & 1) === 0 || late > at + 0.25) pset(bx + ii, by + j, c);
@@ -31115,14 +31158,19 @@ hdzkSSbcc.
     j.t = s.t; j.fac = s.fac; j.v = s.v || null; j.vin = s.vin ? 1 : 0; j.c = s.c || null;
     j.h = pot.f >= 6 ? 'leg' : pot.h; j.f = pot.f; j.leg = pot.f >= 6 ? pot.leg : null; j.trim = st.trim; j.base = undefined; j.q = 0;
     st.figJob = j;
-    st.k = (j.v === 'knight' ? P.scale.knight : P.scale[j.t]) || 4;
-    const zm = FIG.zoneMap(j.t, j.fac, j.v, j.vin); st.zm = zm; st.fw = zm.w; st.fh = zm.h;
+    const sc = (j.v === 'knight' ? P.scale.knight : P.scale[j.t]) || 4; st.det = figReal() ? detOf(sc) : 1; st.k = sc / st.det;
+    const zm = FIG.zoneMap(j.t, j.fac, j.v, j.vin, st.det); st.zm = zm; st.fw = zm.w; st.fh = zm.h;
     st.Zc = buildZone(zm, selZone(zm, 1)); st.Zt = buildZone(zm, selZone(zm, 2));
     const cracked = !!j.vin || j.v === 'puddle';
     st.Zg = cracked ? buildZone(zm, selCrack(zm)) : null; st.crackOn = cracked ? 1 : 0;
     st.Zl = st.mode === 'knight' ? buildZone(zm, selLantern(zm)) : null;
     st.recess = recessMap(zm);
-    if (figReal()) { const g = FIG.glints(j.t, j.fac, j.v); for (let i = 0; i < 5; i++) { const p = g && g[i]; st.gl[i * 2] = p ? p[0] : st.fw >> 1; st.gl[i * 2 + 1] = p ? p[1] : st.fh >> 1; } }
+    // a finer figure floods its own rings, but the TIME comes from the 1x figure (upscaling can join or split a zone's parts):
+    // every zone fills exactly as fast as before, so the windows, the score and the sim are untouched
+    // (the early-release gap count too: st.z1 = the 1x zones)
+    st.z1 = null;
+    if (st.det > 1) { const z1 = FIG.zoneMap(j.t, j.fac, j.v, j.vin, 1); st.z1 = { cloak: buildZone(z1, selZone(z1, 1)), trim: buildZone(z1, selZone(z1, 2)), glue: st.Zg ? buildZone(z1, selCrack(z1)) : null, lantern: st.Zl ? buildZone(z1, selLantern(z1)) : null }; }
+    if (figReal()) { const g = FIG.glints(j.t, j.fac, j.v, st.det); for (let i = 0; i < 5; i++) { const p = g && g[i]; st.gl[i * 2] = p ? p[0] : st.fw >> 1; st.gl[i * 2 + 1] = p ? p[1] : st.fh >> 1; } }
     else fallbackGlints(zm, st.gl);
     const N = zm.w * zm.h;
     st.filled = new Uint8Array(N); st.paintT = new Float32Array(N); st.filled2 = null; st.zd2 = null;
@@ -31159,10 +31207,10 @@ hdzkSSbcc.
     st.zid = id; st.zd = zd; st.zs = 0; st.holdT = 0; st.fullAt = -1; st.R = -1; st.lateT = 0; st.chimeT = -9; st.zoneClock = 0;
     st.filled.fill(0); st.paintT.fill(0); st.nGaps = 0; st.gapsLeft = 0;
     if (st.isTwin && id === 'cloak') { st.zd2 = st.Zt; st.filled2 = new Uint8Array(st.filled.length); }
-    const fill = clamp((zd.max + 1) * 0.085, id === 'glue' || id === 'lantern' ? 0.55 : 0.7, 1.35);
+    const z1 = st.z1 && st.z1[id], m1 = z1 ? z1.max : zd.max, fill = clamp((m1 + 1) * 0.085, id === 'glue' || id === 'lantern' ? 0.55 : 0.7, 1.35);
     // ring 0 shows at once, the last ring lands exactly on the chime (the zone LOOKS full when it chimes: CRISP is judged
     // around that moment, so a painter who releases on the last ring is never "early")
-    st.ringDt = fill / Math.max(1, zd.max); st.tFull = fill; st.relErr = 0;
+    st.ringDt = fill / Math.max(1, zd.max); st.ringDt1 = fill / Math.max(1, m1); st.tFull = fill; st.relErr = 0;
     st.armed = noInputHeld(); go('zone'); setBtns(null);
   }
   function floodTo(R) {
@@ -31192,7 +31240,7 @@ hdzkSSbcc.
       }
       // released
       AUDIO.sfx('flood_stop');
-      if (st.holdT < HOLD_MIN && st.R <= 1) { st.filled.fill(0); if (st.filled2) st.filled2.fill(0); st.zs = 0; st.R = -1; st.armed = true; pop(S_.tooShort, ROLE.soft); return; }
+      if (st.holdT < HOLD_MIN && (st.z1 ? st.holdT < 2 * st.ringDt1 : st.R <= 1)) { st.filled.fill(0); if (st.filled2) st.filled2.fill(0); st.zs = 0; st.R = -1; st.armed = true; pop(S_.tooShort, ROLE.soft); return; }
       const err = st.fullAt >= 0 ? st.holdT - st.fullAt : st.holdT - st.tFull;
       st.relErr = err;
       if (st.fullAt < 0) { makeGaps(); if (st.nGaps > 0) { st.zs = 2; quip('gaps'); pop(S_.gapsLeft, ROLE.info); return; } }
@@ -31234,7 +31282,12 @@ hdzkSSbcc.
     const zd = st.zd, w = st.fw, list = zd.list, rem = [];
     for (let n = 0; n < zd.n; n++) { const i = list[n]; if (!st.filled[i]) rem.push(i); }
     if (!rem.length) { st.nGaps = 0; return; }
-    const K = Math.min(rem.length, rules.gapsForShare(rem.length / zd.n));
+    let share = rem.length / zd.n; const z1 = st.z1 && st.z1[st.zid];
+    if (z1) {                                                        // a finer figure: the share the 1x figure would have left
+      const R1 = Math.floor(st.holdT / st.ringDt1); let left = 0; for (let n = 0; n < z1.n; n++) if (z1.ring[z1.list[n]] > R1) left++;
+      share = left / z1.n; if (!left) { for (const i of rem) st.filled[i] = 1; st.nGaps = 0; return; }
+    }
+    const K = Math.min(rem.length, rules.gapsForShare(share));
     const seeds = []; let far = rem[rem.length - 1]; seeds.push(far);
     while (seeds.length < K) {
       let best = -1, bd = -1;
@@ -31315,7 +31368,7 @@ hdzkSSbcc.
     if (id && id[0] === 'b') {
       st.base = +id[1]; st.lastBase = st.base; st.sub = 1; st.pt = 0;
       const cols = st.base === 0 ? C.STONE2 : st.base === 1 ? C.FERN : st.base === 2 ? C.EMBER : C.WHITE;
-      const k = st.k, y = st._y0 + (st.fh - 2) * k;
+      const k = st.k, y = st._y0 + (st.fh - 2 * st.det) * k;
       for (let i = 0; i < 10; i++) PFX.emit(st.base === 3 ? PK.DOT : PK.CONFETTI, st._x0 + FXR.r(0, st.fw * k), y - FXR.r(10, 30), FXR.r(-0.2, 0.2), FXR.r(0.2, 0.6), 30, cols, 1, y + 4);
     }
   }
@@ -31717,7 +31770,7 @@ hdzkSSbcc.
     if (ph === 'after' || ph === 'empty' || (ph === 'reveal' && st.sub === 2 && (st.placed === 'shelf' || st.placed === 'keep' || st.placed === 'deliver') && st.pt > 0.45)) return;
     if (ph === 'choose' || ph === 'card' && st.after === 'choose') {
       if (st.stage === 0 && !st.figOpts.length) return;
-      st.k = (st.bare.v === 'knight' ? P.scale.knight : P.scale[st.bare.t]) || 4;
+      { const sc = (st.bare.v === 'knight' ? P.scale.knight : P.scale[st.bare.t]) || 4; st.det = figReal() ? detOf(sc) : 1; st.k = sc / st.det; }
       setFO(t, rim, 1, 1);
       shadowEll(cx, by + 1, 22, 3, 1.1);
       FIG.draw(st.bare, cx, by, st.k, FO);
@@ -31796,11 +31849,11 @@ hdzkSSbcc.
   }
   let CV_S = null;
   function drawSpin(cx, by, spin, rim, real) {
-    const k = st.k, w = st.fw, h = st.fh, cw = (w + 4) * k, ch = (h + 4) * k;
+    const k = st.k, w = st.fw, h = st.fh, cw = (w + 4 * st.det) * k, ch = (h + 4 * st.det) * k;
     if (!CV_S || CV_S.w !== cw || CV_S.h !== ch) CV_S = canvas8(cw, ch);
     FO.wash = 1; FO.hi = 5; FO.zones = undefined; FO.fx = false; FO.lantern = st.lanternLit ? 1 : undefined;
-    pushTarget(); target(CV_S); clear8(CV_S); FIG.draw(st.figJob, cw >> 1, ch - 2 * k, k, FO); FO.zones = ZN; FO.fx = true; FO.lantern = undefined;
-    if (!real) fallbackTouches((cw >> 1) - ((w * k) >> 1), ch - 2 * k - h * k, h + 2, 5, st.base);
+    pushTarget(); target(CV_S); clear8(CV_S); FIG.draw(st.figJob, cw >> 1, ch - 2 * k * st.det, k, FO); FO.zones = ZN; FO.fx = true; FO.lantern = undefined;
+    if (!real) fallbackTouches((cw >> 1) - ((w * k) >> 1), ch - 2 * k * st.det - h * k, h + 2, 5, st.base);
     popTarget();
     const a = spin * Math.PI * 2, c = Math.cos(a), nw = Math.max(1, Math.round(cw * Math.abs(c)));
     blitScaleX(CV_S, cx - (nw >> 1), by + 2 * k - ch, nw, c < 0);
