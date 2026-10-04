@@ -6083,7 +6083,7 @@ const LAYOUT = {
   "My fan is not for sale.": "Mein Fächer ist unverkäuflich.",
   "I only bid on what I love, dear.": "Ich biete nur auf, was ich liebe, Schätzchen.",
   "Biscuit": "Keks",
-  "Mix unique colours. Embark on your journey.": "Mische einzigartige Farben. Begib dich auf deine Reise.",
+  "Paint tiny armies. Mix unique colours. Embark on a journey!": "Male winzige Armeen. Mische eigene Farben. Auf zur Reise!",
   "{y}WALK{/} with the arrow keys, or click where you want to go. {y}E{/} or {y}ENTER{/} talks, looks and uses things. {y}ESC{/} opens the pause menu.": "{y}LAUF{/} mit den Pfeiltasten oder klick dorthin, wo du hinwillst. {y}E{/} oder {y}ENTER{/}: reden, ansehen, benutzen. {y}ESC{/} öffnet das Pausenmenü.",
   "{y}A DAY{/}: read the morning card, then paint, mix and visit the town in any order. Flip the sign once a day to {y}OPEN THE SHOP{/}. When the lamps come on, the stairs lead up to bed.": "{y}EIN TAG{/}: Erst die Morgenkarte, dann malen, mischen und durch die Stadt bummeln, wie du magst. Einmal am Tag drehst du das Schild um: {y}LADEN ÖFFNEN{/}. Gehen die Lampen an, führt die Treppe hinauf ins Bett.",
   "{y}THE GOAL{/}: the flag in the top bar shows the next renovation and its price. When it says {y}READY{/}, Henny knocks in the evening. Pay her, sleep, and wake up to a new shop.": "{y}DAS ZIEL{/}: Das Fähnchen oben in der Leiste zeigt den nächsten Umbau und seinen Preis. Steht dort {y}BEREIT{/}, klopft Henny am Abend. Bezahl sie, schlaf und wach in einem neuen Laden auf.",
@@ -7762,7 +7762,7 @@ const LAYOUT = {
   "My fan is not for sale.": "Mi abanico no está en venta.",
   "I only bid on what I love, dear.": "Solo pujo por lo que amo, querido.",
   "Biscuit": "Galleta",
-  "Mix unique colours. Embark on your journey.": "Mezcla colores únicos. Emprende tu viaje.",
+  "Paint tiny armies. Mix unique colours. Embark on a journey!": "Pinta minis. Mezcla colores únicos. ¡Emprende un viaje!",
   "{y}WALK{/} with the arrow keys, or click where you want to go. {y}E{/} or {y}ENTER{/} talks, looks and uses things. {y}ESC{/} opens the pause menu.": "{y}CAMINA{/} con las flechas o haz clic donde quieras ir. {y}E{/} o {y}ENTER{/}: hablar, mirar y usar cosas. {y}ESC{/} abre el menú de pausa.",
   "{y}A DAY{/}: read the morning card, then paint, mix and visit the town in any order. Flip the sign once a day to {y}OPEN THE SHOP{/}. When the lamps come on, the stairs lead up to bed.": "{y}UN DÍA{/}: lee la tarjeta de la mañana y luego pinta, mezcla y visita el pueblo en el orden que quieras. Gira el letrero una vez al día para {y}ABRIR LA TIENDA{/}. Cuando se encienden las luces, sube a dormir.",
   "{y}THE GOAL{/}: the flag in the top bar shows the next renovation and its price. When it says {y}READY{/}, Henny knocks in the evening. Pay her, sleep, and wake up to a new shop.": "{y}LA META{/}: el banderín de la barra superior muestra la próxima reforma y su precio. Cuando diga {y}¡LISTO!{/}, Henny llamará por la noche. Págale, duerme y despierta en una tienda nueva.",
@@ -23190,7 +23190,7 @@ hdzkSSbcc.
 
   // ================================================================ TEXT (presentation)
   const TEXT = {
-    tagline: 'Mix unique colours. Embark on your journey.',
+    tagline: 'Paint tiny armies. Mix unique colours. Embark on a journey!',
     /** HOW TO PLAY (pause menu + title): paragraphs wrapped at 268 px, a page every 9 lines (blank separators included) */
     help: [
       '{y}WALK{/} with the arrow keys, or click where you want to go. {y}E{/} or {y}ENTER{/} talks, looks and uses things. {y}ESC{/} opens the pause menu.',
@@ -38093,18 +38093,21 @@ kkkkkkkkkkkk`, { p: 'PARCH', d: 'PRIMER1', r: 'RUST', k: 'KRAFT' });
     return y + LOGO.h;
   }
 
-  /** the tagline's lines (≤ 2: the board's width, else a wider wrap; never 3 — a 5-row touch menu would cover it), widths and outlined canvases */
-  const TAGC = { lang: '', src: '', n: 0, L: [], w: [], cv: [] };
+  /** the tagline's lines (as many as tagRoom() allows: 3, or 2 above a 5-row menu), widths and outlined canvases — per language */
+  const TAGC = { lang: '', src: '', room: 0, n: 0, L: [], w: [], cv: [] };
+  /** tagline lines that fit between the board and the menu plate: 3, or 2 under a 5-row menu (CONTINUE; a line = 10 px + 1) */
+  function tagRoom() { return menuGeom().y - (LOGO_Y + LOGO.h + 1) >= 31 ? 3 : 2; }
   function tagLines() {
     const tag = TXT().tagline; if (!tag) return null;
-    if (TAGC.lang === I18N.lang && TAGC.src === tag) return TAGC;
-    buildLogo(); TAGC.lang = I18N.lang; TAGC.src = tag;
-    // one sentence per line when each fits under the board ("Mix unique colours. / Embark on your journey."),
-    // else the board's wrap, else a wider one
-    const s = T(tag), sen = s.split(/(?<=[.!?…])\s+/);
-    let L = sen.length === 2 && sen.every(x => textW(x) <= LOGO.w + 8) ? sen : wrapText(s, LOGO.w + 8, FONT_M);
-    if (L.length > 2) L = wrapText(s, 236, FONT_M);
-    TAGC.n = Math.min(2, L.length); TAGC.L = L; TAGC.w.length = 0; TAGC.cv.length = 0;
+    buildLogo(); const room = tagRoom();
+    if (TAGC.lang === I18N.lang && TAGC.src === tag && TAGC.room === room) return TAGC;
+    TAGC.lang = I18N.lang; TAGC.src = tag; TAGC.room = room;
+    // one sentence per line when they fit the room and the board's width; else the board's wrap
+    const s = T(tag), sen = s.split(/(?<=[.!?…])\s+/), bw = LOGO.w + 8;
+    let L = sen.length > 1 && sen.length <= room && sen.every(x => textW(x) <= bw) ? sen : wrapText(s, bw, FONT_M);
+    // too many lines for the room: the NARROWEST wrap that fits it (balanced, as far right of the photo wall as it can be)
+    for (let w = bw + 2; L.length > room && w <= 236; w += 2) L = wrapText(s, w, FONT_M);
+    TAGC.n = Math.min(room, L.length); TAGC.L = L; TAGC.w.length = 0; TAGC.cv.length = 0;
     for (let i = 0; i < TAGC.n; i++) { const w = textW(L[i]), cv = canvas8(w + 2, 12); pushTarget(); target(cv); textO(L[i], 1, 1, K.PARCH, ROLE.ink, FONT_M); popTarget(); TAGC.w.push(w); TAGC.cv.push(cv); }
     return TAGC;
   }
@@ -39942,7 +39945,7 @@ ooooo`, { o: 'BRONZE', H: 'HONEY', y: 'FLAME' });
     },
   };
 
-  Object.assign(CINE, { loop: LOOP, _ti: () => TI, _it: () => IT, _st: () => ST, _lt: () => LT, _ln: () => LN, _en: () => ED, _cr: () => CR, _tagLeft: tagLeft, _tag: () => { const tg = tagLines(); return tg ? { n: tg.n, all: tg.L.length, w: tg.w.slice() } : null; },
+  Object.assign(CINE, { loop: LOOP, _ti: () => TI, _it: () => IT, _st: () => ST, _lt: () => LT, _ln: () => LN, _en: () => ED, _cr: () => CR, _tagLeft: tagLeft, _tag: () => { const tg = tagLines(); return tg ? { n: tg.n, all: tg.L.length, w: tg.w.slice(), room: tg.room, bottom: LOGO_Y + LOGO.h + 1 + (tg.n - 1) * 10 + 11, menuTop: menuGeom().y } : null; },
     _art: reset => { if (reset) ARTHK = null; return artHooks(); } });   // (tests) the art hooks, re-detected on reset
 })();
 
