@@ -30484,7 +30484,7 @@ hdzkSSbcc.
     camX: CAM_CHOOSE, camTX: CAM_CHOOSE, camY: -22, panel: 1, panelT: 1,
     bar: null, btns: null, prompt: null, prompt2: null, armed: false, down0: false,
     // choosing
-    stage: 0, sel: 0, page: 0, figOpts: [], figKind: [], cloakOpts: [], hit: new Int16Array(4 * 40), hitId: new Int16Array(40), nHit: 0,
+    stage: 0, sel: 0, page: 0, figOpts: [], figKind: [], cloakOpts: [], hit: new Int16Array(4 * 40), hitId: new Int16Array(40), nHit: 0, hitStage: -1,
     pageHit: new Int16Array(8), flashT: 0, cloakKey: 'red.1', trimKey: 'yellow.1', nopeT: -9, nopeI: -1, tip: null,
     // the job
     fig: null, fromStock: false, pot: null, potRef: null, trim: 'yellow', base: 0, lastBase: 0, card: null,
@@ -31465,7 +31465,9 @@ hdzkSSbcc.
       if (IN.repeat('up')) { st.sel = Math.max(0, st.sel - (st.stage === 2 ? 3 : 4)); moved = true; }
       if (IN.repeat('down')) { st.sel = Math.min(n - 1, st.sel + (st.stage === 2 ? 3 : 4)); moved = true; }
     }
-    for (let i = 0; i < st.nHit; i++) {
+    // the slots' hit rects are the LAST DRAW's: after a step change (a tap that picked a cloak) a catch-up tick can run before the
+    // redraw, and the old step's ids (cloak 0–8) are not this step's (trim 0–5) — the iPad crash of 2026-10-04
+    for (let i = 0; st.hitStage === st.stage && i < st.nHit; i++) {
       const r = i * 4, p = IN.touch ? 2 : 0;
       if (IN.over(st.hit[r] - p, st.hit[r + 1] - p, st.hit[r + 2] + p * 2, st.hit[r + 3] + p * 2)) {
         if (IN.click) { IN.click = false; st.sel = st.hitId[i]; return pickSel(); }
@@ -31851,7 +31853,7 @@ hdzkSSbcc.
   }
   function drawPanel() {
     const x0 = Math.round(PANEL_X + st.panel * 150), y0 = VIEW_Y + 3, w = PANEL_W, h = VIEW_H - 6;
-    st.panelX0 = x0; st.nHit = 0;
+    st.panelX0 = x0; st.nHit = 0; st.hitStage = st.stage;
     if (x0 >= W) return;
     UI.panel(x0, y0, w, h, 'walnut');
     // the three tabs
